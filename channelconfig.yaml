@@ -1,0 +1,82 @@
+# ============================================================
+#  CHANNEL CONFIG — edit this file to define your channel
+#  Run `python setup.py` if you'd rather answer questions
+# ============================================================
+
+channel:
+  name: "My Awesome Channel" # display name (used in Discord notifications)
+  niche: "cozy fantasy animation" # one phrase that describes your content focus
+
+  # What kind of content do you want? (one or more)
+  # Options: pixar_dream_story | flipped_meme | niche_story | awe_clip
+  content_types:
+    - awe_clip
+    - pixar_dream_story
+
+  # Paste 1-5 URLs of videos you want to replicate the vibe of
+  # (TikTok, YouTube Shorts, Instagram Reels — public links)
+  example_videos:
+    - "https://www.tiktok.com/@example/video/123"
+    - "" # leave blank if you have fewer examples
+
+  # Free-text style notes — the more specific, the better
+  style_notes: |
+    Warm, painterly Pixar/Disney aesthetic. Soft pastel colors.
+    Focus on cute animal characters and magical nature scenes.
+    Emotional, heartwarming tone — NOT dark or scary.
+    Vertical 9:16 format, 15-25 seconds.
+
+  target_audience: "Gen Z and Millennials who love animation and fantasy"
+
+  # Words / themes to AVOID in your content
+  avoid: "violence, horror, dark themes, overly corporate humor"
+
+# ============================================================
+#  POSTING SCHEDULE  (24-hr format, UTC)
+# ============================================================
+schedule:
+  - time: "09:00"
+    type: awe_clip
+  - time: "15:00"
+    type: pixar_dream_story
+  - time: "20:00"
+    type: awe_clip
+
+# ============================================================
+#  PLATFORMS  — list the ones you want to post to
+#  Supported: tiktok | instagram | youtube | x
+# ============================================================
+platforms:
+  - tiktok
+  - instagram
+
+# ============================================================
+#  API KEYS & CREDENTIALS
+#  Tip: you can also put these in a .env file instead
+# ============================================================
+credentials:
+  gemini_api_key: "" # or set GEMINI_API_KEY in .env
+  magichour_api_key: "" # or set MAGICHOUR_API_KEY in .env
+  pinecone_api_key: "" # or set PINECONE_API_KEY in .env
+  pinecone_index: "magichour-memory"
+
+  postiz_url: "" # e.g. http://localhost:3000  or your hosted Postiz URL
+  postiz_api_key: "" # Settings → API Key inside Postiz
+
+  # One Postiz integration ID per platform.
+  # Find these in Postiz → Integrations after connecting each account.
+  postiz_channels:
+    tiktok: ""
+    instagram: ""
+    youtube: ""
+    x: ""
+
+  discord_webhook_url: "" # optional — leave blank to disable
+
+# ============================================================
+#  ADVANCED — leave defaults unless you know what you're doing
+# ============================================================
+advanced:
+  research_cache_hours: 12 # re-run research every N hours
+  batch_size: 3 # prompts generated per research cycle
+  test_mode: false # true = skip Magic Hour + post a dummy file

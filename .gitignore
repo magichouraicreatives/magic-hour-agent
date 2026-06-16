@@ -1,0 +1,27 @@
+# Secrets — never commit these
+.env
+*.txt.key
+auth_*.txt
+*_auth.txt
+*_token.txt
+credentials.json
+token.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# Temp files
+/tmp/
+*.mp4
+research_report_*.json
+last_prompt.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
