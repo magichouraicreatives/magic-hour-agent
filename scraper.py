@@ -456,7 +456,9 @@ Return ONLY a JSON array:
         }
     }
 
-    report_path = f"/tmp/research_report_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M')}.json"
+    filename = f"research_report_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M')}.json"
+    report_path = os.path.join("/data", filename)
+    
     with open(report_path, "w") as f:
         json.dump(report, f, indent=2)
 

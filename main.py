@@ -73,18 +73,28 @@ def get_prompt_generator():
 
 # ── Research cache ───────────
 
+PERSISTENT_DIR = "/data"
+
 def get_research() -> dict:
+    """
+    Attempts to read cached research from the Railway volume.
+    Falls back to running a fresh scrape if cache is expired or missing.
+    """
     cache_hours = cfg.research_cache_hours
-    reports = sorted(glob.glob("/tmp/research_report_*.json"), reverse=True)
+    
+    # Check the persistent directory path instead of /tmp
+    search_pattern = os.path.join(PERSISTENT_DIR, "research_report_*.json")
+    reports = sorted(glob.glob(search_pattern), reverse=True)
+    
     if reports:
         age = time.time() - os.path.getmtime(reports[0])
         if age < cache_hours * 3600:
             print(f"Using cached research ({int(age/3600)}h old)")
             with open(reports[0]) as f:
                 return json.load(f)
+                
     print("Running fresh research...")
     return run_research()
-
 
 # ── Discord ─────────
 
@@ -114,10 +124,10 @@ def post_to_platform(platform: str, video_path: str, prompt_package: dict) -> di
     if not integration_id:
         return {"status": "skipped", "reason": f"no integration id for {platform}"}
 
-    if not video_path.endswith(".mp4"):
-        mp4_path = video_path.rsplit(".", 1)[0] + ".mp4"
-        shutil.copy(video_path, mp4_path)
-        video_path = mp4_path
+    # if not video_path.endswith(".mp4"):
+    #     mp4_path = video_path.rsplit(".", 1)[0] + ".mp4"
+    #     shutil.copy(video_path, mp4_path)
+    #     video_path = mp4_path
 
     if os.path.getsize(video_path) < 100:
         return {"status": "failed", "error": "video file too small"}
