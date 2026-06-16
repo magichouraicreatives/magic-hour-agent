@@ -312,9 +312,9 @@ def main():
         print(f"\nHook:    {prompt_package.get('hook')}")
         print(f"Caption: {prompt_package.get('caption')}")
         print(f"\nPrompt:\n{prompt_package.get('sora_prompt', '')[:300]}...")
-        confirm = input("\nPost this? (y/n): ").strip().lower()
-        if confirm == "y":
-            run_single_slot(prompt_package)
+        #confirm = input("\nPost this? (y/n): ").strip().lower()
+        #if confirm == "y":
+        run_single_slot(prompt_package)
         return
 
     for slot in cfg.schedule:
