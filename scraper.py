@@ -458,6 +458,8 @@ Return ONLY a JSON array:
 
     filename = f"research_report_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M')}.json"
     report_path = os.path.join("/data", filename)
+
+    os.makedirs(os.path.dirname(report_path), exist_ok=True)
     
     with open(report_path, "w") as f:
         json.dump(report, f, indent=2)

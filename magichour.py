@@ -7,6 +7,8 @@ load_dotenv()
 
 client = Client(token=os.getenv("MAGICHOUR_API_KEY"))
 
+PERSISTENT_DIR = "/data"
+
 MODEL_DURATIONS = {
     "sora-2":    [4, 8, 12, 24, 36, 48, 60],
     "kling-3.0": [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
@@ -154,9 +156,7 @@ def generate_awe_clip_video(prompt_package: dict) -> dict:
         "credits_charged": total_credits,
         "content_type": "awe_clip",
     }
-
 def generate_video(prompt_package):
-
     content_type = prompt_package.get("content_type", "pixar_dream_story")
     prompt = prompt_package.get("sora_prompt", "")
     model = _select_model(content_type)
@@ -169,6 +169,10 @@ def generate_video(prompt_package):
     duration = _nearest_duration(target_duration, model)
 
     print(f"Submitting video to Magic Hour: {prompt}")
+    
+    # Ensure the persistent storage folder exists right now
+    os.makedirs(PERSISTENT_DIR, exist_ok=True)
+    
     try:
         result = client.v1.text_to_video.generate(
             end_seconds=duration,
@@ -180,8 +184,7 @@ def generate_video(prompt_package):
             audio=False,
             wait_for_completion=True,
             download_outputs=True,
-            download_directory="/tmp"
-        
+            download_directory=PERSISTENT_DIR  # FIXED: Changed from /tmp to persistent path
         )
 
         downloads = getattr(result, "downloads", []) or []
@@ -190,8 +193,9 @@ def generate_video(prompt_package):
         if downloads:
             video_url = downloads[0].url if hasattr(downloads[0], "url") else str(downloads[0])
 
-        import glob
-        tmp_files = sorted(glob.glob("/tmp/*.mp4"), key=os.path.getmtime, reverse=True)
+        # FIXED: Look inside the persistent folder instead of /tmp
+        search_pattern = os.path.join(PERSISTENT_DIR, "*.mp4")
+        tmp_files = sorted(glob.glob(search_pattern), key=os.path.getmtime, reverse=True)
         local_path = tmp_files[0] if tmp_files else None
 
         if getattr(result, "credits_charged", None):
@@ -213,9 +217,12 @@ def generate_video(prompt_package):
         return {"status": "failed", "error": str(e)}
     
 
-def download_video(video_url: str, output_path:str) -> str:
-    import requests
-    print(f"Downloading from URl...")
+def download_video(video_url: str, output_path: str) -> str:
+    print(f"Downloading from URL...")
+    
+    # Safely build directory tree structure if it is missing
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    
     response = requests.get(video_url, stream=True, timeout=120)
     response.raise_for_status()
 
@@ -223,7 +230,7 @@ def download_video(video_url: str, output_path:str) -> str:
         for chunk in response.iter_content(chunk_size=8192):
             f.write(chunk)
 
-    size_mb = os.path.getsize(output_path)/ (1024*1024)
+    size_mb = os.path.getsize(output_path) / (1024 * 1024)
     print(f"Saved: {output_path} ({size_mb:.1f} MB)")
     return output_path
     

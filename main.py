@@ -7,7 +7,7 @@ import os
 import shutil
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import requests
 import schedule
@@ -124,10 +124,8 @@ def post_to_platform(platform: str, video_path: str, prompt_package: dict) -> di
     if not integration_id:
         return {"status": "skipped", "reason": f"no integration id for {platform}"}
 
-    # if not video_path.endswith(".mp4"):
-    #     mp4_path = video_path.rsplit(".", 1)[0] + ".mp4"
-    #     shutil.copy(video_path, mp4_path)
-    #     video_path = mp4_path
+    if not video_path or not os.path.exists(video_path):
+        return {"status": "failed", "error": f"Video file not found at path: {video_path}"}
 
     if os.path.getsize(video_path) < 100:
         return {"status": "failed", "error": "video file too small"}
@@ -182,8 +180,10 @@ def post_to_platform(platform: str, video_path: str, prompt_package: dict) -> di
 
     post_body = {
         "type": "now",
-        "date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-        "shortLink": False, "tags": [],
+        # FIXED: Swapped deprecated utcnow() for a clean, explicit ISO UTC timestamp string
+        "date": datetime.now(timezone.utc).isoformat().replace("+00:00", ".000Z"),
+        "shortLink": False, 
+        "tags": [],
         "posts": [{
             "integration": {"id": integration_id},
             "value": [{"content": full_caption,
@@ -196,7 +196,8 @@ def post_to_platform(platform: str, video_path: str, prompt_package: dict) -> di
         post_resp = requests.post(
             f"{base}/posts",
             headers={**headers, "Content-Type": "application/json"},
-            json=post_body, timeout=30,
+            json=post_body, 
+            timeout=30,
         )
         post_resp.raise_for_status()
         data = post_resp.json()
