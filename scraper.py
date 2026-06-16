@@ -260,61 +260,207 @@ def research_emotional_hooks() -> list[dict]:
     """, "emotional hooks")
 
     
-def run_research():
-    print("\nResearch is running...")
+# def run_research():
+#     print("\nResearch is running...")
 
-    viral_worlds = research_viral_worlds()
-    emotional_hooks = research_emotional_hooks()
-    niche_communities = research_niche_communties()
-    story_formats = research_story_formats()
-    meme_trends = research_meme_trends()
+#     viral_worlds = research_viral_worlds()
+#     emotional_hooks = research_emotional_hooks()
+#     niche_communities = research_niche_communties()
+#     story_formats = research_story_formats()
+#     meme_trends = research_meme_trends()
 
-    viral_worlds = sorted(viral_worlds, key=lambda x: x.get("virality_signal",0), reverse=True)[:5]
-    top_emotions = sorted(emotional_hooks, key=lambda x: x.get("virality_signal",0), reverse=True)[:5]
-    top_niches = sorted(niche_communities, key=lambda x: x.get("shareability",0), reverse=True)[:5]
-    top_stories = sorted(story_formats, key=lambda x: x.get("completion_rate_signal", 5), reverse=True)[:5]
-    top_memes = sorted(meme_trends, key=lambda x: x.get("virality_signal",0), reverse=True)[:5]
+#     viral_worlds = sorted(viral_worlds, key=lambda x: x.get("virality_signal",0), reverse=True)[:5]
+#     top_emotions = sorted(emotional_hooks, key=lambda x: x.get("virality_signal",0), reverse=True)[:5]
+#     top_niches = sorted(niche_communities, key=lambda x: x.get("shareability",0), reverse=True)[:5]
+#     top_stories = sorted(story_formats, key=lambda x: x.get("completion_rate_signal", 5), reverse=True)[:5]
+#     top_memes = sorted(meme_trends, key=lambda x: x.get("virality_signal",0), reverse=True)[:5]
+
+#     report = {
+#         "timestamp": datetime.utcnow().isoformat(),
+#         "viral_worlds": viral_worlds,
+#         "top_emotional_hooks": top_emotions,
+#         "top_niches": top_niches,
+#         "top_story_formats": top_stories,
+#         "top_meme_trends": top_memes,
+#         "raw": {
+#             "emotional_hooks": emotional_hooks,
+#             "niche_communities": niche_communities,
+#             "sory_formats": story_formats,
+#             "meme_trends": meme_trends
+#         },
+#         "summary": {
+#             "top_world": viral_worlds[0] if viral_worlds else None,
+#             "dominant_emotion": top_emotions[0].get("emotion") if top_emotions else "awe",
+#             "hottest_niche": top_niches[0].get("niche") if top_niches else "general",
+#             "best_story_format": top_stories[0].get("format_name") if top_stories else "character journey",
+#             "trending_meme": top_memes[0]. get("format_name") if top_memes else "expectation vs reality"
+#         }
+#     }
+
+#     report_path = f"/tmp/research_report_{datetime.utcnow().strftime('%Y%m%d_%H%M')}.json"
+#     with open(report_path, "w") as f:
+#         json.dump(report, f, indent=1)
+
+#     print(f"Research complete")
+#     if viral_worlds:
+#         print(f"Top world: {viral_worlds[0].get('world_name')}")
+#     if top_niches:
+#         print(f"Top niche: {top_niches[0].get('niche')}")
+#     if top_memes:
+#         print(f"Top meme format: {top_memes[0].get('format_name')}")
+#     if top_emotions:
+#         print(f"Dominant emotion: {top_emotions[0].get('emotion')}")
+#     if top_stories:
+#         print(f"Best story format: {top_stories[0].get('format_name')}")
+#     print("viral_worlds raw:", viral_worlds)
+#     print("story_formats raw:", story_formats) 
+
+#     return report
+
+
+def run_research() -> dict:
+    """
+    Smart research that adapts to what the generator actually needs.
+    
+    Priority:
+    1. If user_prompt_generator.py exists and has a RESEARCH_NEEDS list,
+       only research those specific things
+    2. Otherwise run minimal useful research (worlds + memes only)
+       instead of all 5 expensive calls
+    """
+    print("\nResearch running...")
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc).strftime('%B %Y')
+
+    # Check if user generator declares what it needs
+    research_needs = []
+    if os.path.exists("user_prompt_generator.py"):
+        try:
+            import importlib.util
+            spec = importlib.util.spec_from_file_location("upg", "user_prompt_generator.py")
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            research_needs = getattr(mod, "RESEARCH_NEEDS", [])
+        except Exception:
+            pass
+
+    # Default to minimal research if no specific needs declared
+    if not research_needs:
+        research_needs = ["viral_worlds", "meme_trends"]
+
+    print(f"  Researching: {', '.join(research_needs)}")
+
+    viral_worlds = []
+    top_emotions = []
+    top_niches = []
+    top_stories = []
+    top_memes = []
+
+    if "viral_worlds" in research_needs:
+        raw = _call_gemini(f"""
+Find 5 visual world aesthetics going viral on TikTok/Instagram right now ({now}).
+Worlds that make viewers feel "I wish I could be there."
+Trending in AI art, fantasy, historical, or sci-fi short-form video.
+
+Return ONLY a JSON array of 5 worlds:
+{{
+  "world_name": "name",
+  "visual_description": "detailed description for Sora AI generation",
+  "lighting": "specific lighting",
+  "color_palette": "dominant colors",
+  "emotional_quality": "emotion triggered",
+  "virality_signal": 1-10,
+  "why_viewers_want_to_be_there": "one sentence"
+}}
+""", "viral worlds")
+        viral_worlds = sorted(raw or [], key=lambda x: float(x.get("virality_signal", 5) if str(x.get("virality_signal", 5)).replace('.','').isdigit() else 5), reverse=True)[:5]
+
+    if "meme_trends" in research_needs:
+        raw = _call_gemini(f"""
+Find 5 proven viral meme/comedy video formats working on TikTok/Instagram right now ({now}).
+Formats that work as VISUAL video content — not just text memes.
+Focus on formats with mundane→magical contrast or satisfying visual reveals.
+
+Return ONLY a JSON array of 5 formats:
+{{
+  "format_name": "name",
+  "visual_structure": "beat-by-beat what viewer sees",
+  "mundane_setup": "specific relatable opening",
+  "magical_counterpart": "specific stunning visual counterpart",
+  "comedy_device": "what makes it funny",
+  "aesthetic_quality": "what makes it beautiful",
+  "text_overlay_style": "how text appears",
+  "virality_signal": 1-10
+}}
+""", "meme trends")
+        top_memes = sorted(raw or [], key=lambda x: float(x.get("virality_signal", 5) if str(x.get("virality_signal", 5)).replace('.','').isdigit() else 5), reverse=True)[:5]
+
+    if "emotional_hooks" in research_needs:
+        raw = _call_gemini(f"""
+Find 5 emotional triggers stopping scrolls on short-form video right now ({now}).
+Return ONLY a JSON array:
+{{
+  "emotion": "name",
+  "trigger_element": "what visual triggers it",
+  "visual_execution": "how to create this in a short video",
+  "virality_signal": 1-10
+}}
+""", "emotional hooks")
+        top_emotions = sorted(raw or [], key=lambda x: float(x.get("virality_signal", 5) if str(x.get("virality_signal", 5)).replace('.','').isdigit() else 5), reverse=True)[:5]
+
+    if "niches" in research_needs:
+        raw = _call_gemini(f"""
+Find 5 specific professional/creative communities highly active on TikTok/Instagram ({now}).
+Communities with strong identity and a vivid "dream version" of their work AI could visualize.
+Return ONLY a JSON array:
+{{
+  "niche": "specific community name",
+  "real_work_scene": "what their ordinary work looks like",
+  "dream_transformation": "magical version they'd step into",
+  "insider_detail": "something only they'd recognize",
+  "share_trigger": "why they'd share this",
+  "shareability": 1-10
+}}
+""", "niches")
+        top_niches = sorted(raw or [], key=lambda x: float(x.get("shareability", 5) if str(x.get("shareability", 5)).replace('.','').isdigit() else 5), reverse=True)[:5]
+
+    if "story_formats" in research_needs:
+        raw = _call_gemini(f"""
+Find 5 short-form video story formats getting massive views on TikTok/Instagram ({now}).
+Formats where viewer thinks "I wish I could be there."
+Return ONLY a JSON array:
+{{
+  "format_name": "name",
+  "story_structure": "setup → conflict → peak → resolution",
+  "transport_mechanism": "why viewer feels they're there",
+  "visual_style": "best visual style for this format",
+  "completion_rate_signal": 1-10
+}}
+""", "story formats")
+        top_stories = sorted(raw or [], key=lambda x: float(x.get("completion_rate_signal", 5) if str(x.get("completion_rate_signal", 5)).replace('.','').isdigit() else 5), reverse=True)[:5]
 
     report = {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "viral_worlds": viral_worlds,
         "top_emotional_hooks": top_emotions,
         "top_niches": top_niches,
         "top_story_formats": top_stories,
         "top_meme_trends": top_memes,
-        "raw": {
-            "emotional_hooks": emotional_hooks,
-            "niche_communities": niche_communities,
-            "sory_formats": story_formats,
-            "meme_trends": meme_trends
-        },
         "summary": {
             "top_world": viral_worlds[0] if viral_worlds else None,
             "dominant_emotion": top_emotions[0].get("emotion") if top_emotions else "awe",
             "hottest_niche": top_niches[0].get("niche") if top_niches else "general",
             "best_story_format": top_stories[0].get("format_name") if top_stories else "character journey",
-            "trending_meme": top_memes[0]. get("format_name") if top_memes else "expectation vs reality"
+            "trending_meme": top_memes[0].get("format_name") if top_memes else "expectation vs reality",
         }
     }
 
-    report_path = f"/tmp/research_report_{datetime.utcnow().strftime('%Y%m%d_%H%M')}.json"
+    report_path = f"/tmp/research_report_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M')}.json"
     with open(report_path, "w") as f:
-        json.dump(report, f, indent=1)
+        json.dump(report, f, indent=2)
 
-    print(f"Research complete")
-    if viral_worlds:
-        print(f"Top world: {viral_worlds[0].get('world_name')}")
-    if top_niches:
-        print(f"Top niche: {top_niches[0].get('niche')}")
-    if top_memes:
-        print(f"Top meme format: {top_memes[0].get('format_name')}")
-    if top_emotions:
-        print(f"Dominant emotion: {top_emotions[0].get('emotion')}")
-    if top_stories:
-        print(f"Best story format: {top_stories[0].get('format_name')}")
-    print("viral_worlds raw:", viral_worlds)
-    print("story_formats raw:", story_formats) 
-
+    print(f"Research complete — {len(viral_worlds)} worlds, {len(top_memes)} meme formats")
     return report
 
 if __name__ == "__main__":
