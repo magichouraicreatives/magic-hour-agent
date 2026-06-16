@@ -60,11 +60,9 @@ Dominant emotions: {[e.get("emotion") for e in top_emotions[:2]]}
 """
 
     output_format = """
-
----
 Return ONLY valid JSON matching this exact schema — no markdown, no extra keys:
 {
-    "sora_prompt": "Physically descriptive prompt for an AI video model. Exact actions, subjects, colors, lighting, framing. Max 60 words.",
+    "sora_prompt": "Physically descriptive prompt focusing entirely on the main action. Must explicitly describe the pet's paws actively playing, strumming, or hitting the instrument. Keep framing simple (like a Ring camera view). Max 50 words.",
     "motion_prompt": "4-9 second seamless loop instructions. Gentle loopable motion only — drifting, swaying, flickering. Max 40 words.",
     "visual_concept": "One sentence capturing the core creative theme.",
     "caption": "Short scroll-stopping social caption. Under 10 words.",
