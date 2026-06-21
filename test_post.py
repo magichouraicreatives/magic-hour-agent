@@ -1,12 +1,4 @@
-"""
-Standalone test for Postiz posting — uses the EXACT same post_to_platform()
-logic as main.py, but skips video generation and lets you point at a local
-video file instead.
 
-Usage:
-    python test_post.py /path/to/your/video.mp4
-    python test_post.py /path/to/your/video.mp4 --platform tiktok
-"""
 
 import argparse
 import os
@@ -112,9 +104,12 @@ def post_to_platform(platform: str, video_path: str, prompt_package: dict) -> di
             return {"__type": "x", "who_can_reply_post": "everyone"}
         return {"__type": p}
 
+    now = datetime.now(timezone.utc)
+    iso_date = now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{now.microsecond // 1000:03d}Z"
+
     post_body = {
         "type": "now",
-        "date": datetime.now(timezone.utc).isoformat().replace("+00:00", ".000Z"),
+        "date": iso_date,
         "shortLink": False,
         "tags": [],
         "posts": [{
