@@ -49,6 +49,7 @@ schedule:
 platforms:
   - tiktok
   - instagram
+  - youtube
 
 # ============================================================
 #  API KEYS & CREDENTIALS
@@ -61,14 +62,14 @@ credentials:
   pinecone_index: "magichour-memory"
 
   postiz_url: "" # e.g. http://localhost:3000  or your hosted Postiz URL
-  postiz_api_key: "" # Settings → API Key inside Postiz
+  postiz_api_key: "4b7cb1ae648008c1a47c1299b35b1c7133abee5bd9f803f7b0c651b1ffc6992c" # Settings → API Key inside Postiz
 
   # One Postiz integration ID per platform.
   # Find these in Postiz → Integrations after connecting each account.
   postiz_channels:
-    tiktok: ""
-    instagram: ""
-    youtube: ""
+    tiktok: "cmqj0zhds0005t28n8su0m4pk"
+    instagram: "cmqj06ais0001lx8m5telt015"
+    youtube: "cmqnck70r000dt28nd1hbjbbt"
     x: ""
 
   discord_webhook_url: "" # optional — leave blank to disable

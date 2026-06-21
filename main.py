@@ -24,7 +24,7 @@ args = parser.parse_args()
 
 from config_loader import ChannelConfig
 cfg = ChannelConfig(args.config)
-if args.test:
+if args.test: 
     cfg.test_mode = True
 
 from scraper import run_research

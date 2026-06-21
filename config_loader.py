@@ -28,7 +28,7 @@ def _env_or_yaml(env_key: str, yaml_value: str) -> str:
  
  
 class ChannelConfig:
-    def __init__(self, yaml_path: str = "channel_config.yaml"):
+    def __init__(self, yaml_path: str = "channelconfig.yaml"):
         raw = _load_yaml(yaml_path)
  
         ch = raw.get("channel", {})
