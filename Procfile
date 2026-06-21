@@ -1,1 +1,1 @@
-worker: python main.py --now
+worker: sleep infinity
