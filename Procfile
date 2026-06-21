@@ -1,1 +1,1 @@
-worker: sleep infinity
+worker: 
