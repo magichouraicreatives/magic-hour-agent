@@ -24,12 +24,23 @@ args = parser.parse_args()
 
 from config_loader import ChannelConfig
 cfg = ChannelConfig(args.config)
-if args.test: 
+if args.test:
     cfg.test_mode = True
 
 from scraper import run_research
 from magichour import generate_awe_clip_video, generate_video, download_video
 from pinecone_store import store_video_performance
+
+
+# ── Postiz config — read directly from env, not cfg ─────────────────────────
+POSTIZ_URL = os.getenv("POSTIZ_URL", "").rstrip("/")
+POSTIZ_API_KEY = os.getenv("POSTIZ_API_KEY", "")
+POSTIZ_CHANNELS = {
+    "tiktok": os.getenv("POSTIZ_CHANNEL_TIKTOK", ""),
+    "instagram": os.getenv("POSTIZ_CHANNEL_INSTAGRAM", ""),
+    "youtube": os.getenv("POSTIZ_CHANNEL_YOUTUBE", ""),
+    "x": os.getenv("POSTIZ_CHANNEL_X", ""),
+}
 
 
 # ── Prompt generator routing ──────
@@ -80,18 +91,32 @@ def get_research() -> dict:
     Attempts to read cached research from the Railway volume.
     Falls back to running a fresh scrape if cache is expired or missing.
     """
-    cache_hours = cfg.research_cache_hours
+    # Ensure the persistent directory exists so glob doesn't error out
+    os.makedirs(PERSISTENT_DIR, exist_ok=True)
     
-    # Check the persistent directory path instead of /tmp
+    cache_hours = getattr(cfg, 'research_cache_hours', 24)
+    
+    # Define and look for the specific pattern inside the persistent volume
     search_pattern = os.path.join(PERSISTENT_DIR, "research_report_*.json")
     reports = sorted(glob.glob(search_pattern), reverse=True)
     
+    # Debug statements to trace volume tracking in your Railway console logs
+    print(f"[CACHE DEBUG] Scanning path: {search_pattern}")
+    print(f"[CACHE DEBUG] Active files found in volume: {reports}")
+    
     if reports:
-        age = time.time() - os.path.getmtime(reports[0])
-        if age < cache_hours * 3600:
-            print(f"Using cached research ({int(age/3600)}h old)")
-            with open(reports[0]) as f:
-                return json.load(f)
+        try:
+            age = time.time() - os.path.getmtime(reports[0])
+            print(f"[CACHE DEBUG] Most recent file age: {int(age / 3600)} hours")
+            
+            if age < cache_hours * 3600:
+                print(f"Using cached research ({int(age / 3600)}h old): {os.path.basename(reports[0])}")
+                with open(reports[0], 'r') as f:
+                    return json.load(f)
+            else:
+                print(f"[CACHE] Cache file found but it has expired (older than {cache_hours} hours).")
+        except Exception as e:
+            print(f"[CACHE ERROR] Failed reading cache file: {e}")
                 
     print("Running fresh research...")
     return run_research()
@@ -116,8 +141,8 @@ def notify_discord(message: str, video_path: str = None):
 
 # ── Posting ────────────
 def post_to_platform(platform: str, video_path: str, prompt_package: dict) -> dict:
-    api_key = cfg.postiz_api_key
-    integration_id = cfg.postiz_channels.get(platform)
+    api_key = POSTIZ_API_KEY
+    integration_id = POSTIZ_CHANNELS.get(platform)
 
     if not api_key:
         return {"status": "skipped", "reason": "no postiz api key"}
@@ -130,11 +155,13 @@ def post_to_platform(platform: str, video_path: str, prompt_package: dict) -> di
     if os.path.getsize(video_path) < 100:
         return {"status": "failed", "error": "video file too small"}
 
-    base = f"{cfg.postiz_url}/api/public/v1"
-    headers = {"Authorization": api_key, "ngrok-skip-browser-warning": "true"}
+    base = f"{POSTIZ_URL}/api/public/v1"
+    headers = {"Authorization": api_key}
     caption = prompt_package.get("caption", "")
     hashtags = " ".join(prompt_package.get("hashtags", []))
     full_caption = f"{caption}\n\n{hashtags}"
+
+    print(f"   [{platform}] Uploading {video_path} ({os.path.getsize(video_path)} bytes) ...")
 
     upload_data = None
     for attempt in range(3):
@@ -151,6 +178,7 @@ def post_to_platform(platform: str, video_path: str, prompt_package: dict) -> di
             upload_data = resp.json()
             break
         except Exception as e:
+            print(f"   [{platform}] Upload attempt {attempt + 1} error: {e}")
             if attempt < 2:
                 time.sleep(5)
             else:
@@ -178,11 +206,15 @@ def post_to_platform(platform: str, video_path: str, prompt_package: dict) -> di
             return {"__type": "x", "who_can_reply_post": "everyone"}
         return {"__type": p}
 
+    # Clean ISO 8601 with millisecond precision (avoids the double-decimal bug
+    # that came from .isoformat().replace("+00:00", ".000Z"))
+    now = datetime.now(timezone.utc)
+    iso_date = now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{now.microsecond // 1000:03d}Z"
+
     post_body = {
         "type": "now",
-        # FIXED: Swapped deprecated utcnow() for a clean, explicit ISO UTC timestamp string
-        "date": datetime.now(timezone.utc).isoformat().replace("+00:00", ".000Z"),
-        "shortLink": False, 
+        "date": iso_date,
+        "shortLink": False,
         "tags": [],
         "posts": [{
             "integration": {"id": integration_id},
@@ -246,6 +278,12 @@ def run_single_slot(prompt_package: dict):
         post_results.append(post_to_platform(platform, video_path, prompt_package))
  
     successes = [r.get("platform") for r in post_results if r.get("status") == "posted"]
+    failures = [r for r in post_results if r.get("status") != "posted"]
+    if failures:
+        print(f"\n[WARNING] {len(failures)} platform(s) failed to post:")
+        for r in failures:
+            print(f"   {r}")
+
     notify_discord(
         f"[{cfg.channel_name}] Posted {content_type} — {', '.join(successes) or 'none'}",
         video_path=video_path,

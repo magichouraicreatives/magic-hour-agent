@@ -1,1 +1,1 @@
-worker: 
+worker: python main.py --now
